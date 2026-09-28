@@ -27,5 +27,10 @@ query pacientes verb=POST {
     } as $paciente
   }
 
-  response = $paciente
+  response = {
+    id: $paciente.id
+    nome: $paciente.nome
+    telefone: $paciente.telefone
+    email: $paciente.email
+  }
 }

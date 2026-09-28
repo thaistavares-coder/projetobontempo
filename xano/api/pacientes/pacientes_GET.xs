@@ -11,5 +11,10 @@ query pacientes verb=GET {
     } as $pacientes
   }
 
-  response = $pacientes
+  response = $pacientes|map:{
+    id: $$.id
+    nome: $$.nome
+    telefone: $$.telefone
+    email: $$.email
+  }
 }

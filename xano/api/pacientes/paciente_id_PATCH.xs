@@ -36,5 +36,10 @@ query "paciente/{paciente_id}" verb=PATCH {
     } as $paciente_atualizado
   }
 
-  response = $paciente_atualizado
+  response = {
+    id: $paciente_atualizado.id
+    nome: $paciente_atualizado.nome
+    telefone: $paciente_atualizado.telefone
+    email: $paciente_atualizado.email
+  }
 }

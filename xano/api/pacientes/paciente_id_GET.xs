@@ -18,5 +18,10 @@ query "paciente/{paciente_id}" verb=GET {
     }
   }
 
-  response = $paciente
+  response = {
+    id: $paciente.id
+    nome: $paciente.nome
+    telefone: $paciente.telefone
+    email: $paciente.email
+  }
 }
