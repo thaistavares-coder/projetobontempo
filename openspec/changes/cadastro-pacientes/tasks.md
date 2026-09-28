@@ -6,23 +6,23 @@
 
 - [x] 1.2 Definir os critérios de validação para telefone e e-mail antes da implementação das validações.
 
-- [ ] 1.3 Implementar no backend as validações de nome, telefone e e-mail; verificar que entradas válidas são aceitas e entradas inválidas são rejeitadas sem gravação parcial.
+- [x] 1.3 Implementar no backend as validações de nome, telefone e e-mail; verificar que entradas válidas são aceitas e entradas inválidas são rejeitadas sem gravação parcial.
 
 ## 2. Cadastro e consulta pela API
 
-- [ ] 2.1 Implementar o cadastro de pacientes no backend; verificar que a resposta contém identificador, nome, telefone e e-mail.
+- [x] 2.1 Implementar o cadastro de pacientes no backend; verificar que a resposta contém identificador, nome, telefone e e-mail.
 
 - [ ] 2.2 Verificar que coincidências em nome, telefone ou e-mail não impedem o cadastro de pacientes distintos.
 
-- [ ] 2.3 Implementar a listagem de pacientes; verificar retorno de lista vazia quando não houver registros e retorno somente dos campos permitidos.
+- [x] 2.3 Implementar a listagem de pacientes; verificar retorno de lista vazia quando não houver registros e retorno somente dos campos permitidos.
 
-- [ ] 2.4 Implementar a consulta individual de paciente por identificador; verificar comportamento para paciente existente e paciente inexistente.
+- [x] 2.4 Implementar a consulta individual de paciente por identificador; verificar comportamento para paciente existente e paciente inexistente.
 
 ## 3. Edição e remoção pela API
 
-- [ ] 3.1 Implementar edição parcial de nome, telefone e e-mail; verificar preservação dos campos não enviados.
+- [x] 3.1 Implementar edição parcial de nome, telefone e e-mail; verificar preservação dos campos não enviados.
 
-- [ ] 3.2 Verificar na edição as validações dos campos enviados, a imutabilidade do identificador e o retorno de não encontrado para paciente inexistente.
+- [x] 3.2 Verificar na edição a preservação de campos não enviados, a atualização de valores válidos, a imutabilidade do identificador e o retorno de não encontrado para paciente inexistente.
 
 - [x] 3.3 Implementar remoção física de paciente no escopo desta change.
 
