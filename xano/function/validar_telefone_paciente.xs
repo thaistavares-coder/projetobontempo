@@ -10,19 +10,20 @@ function "validar_telefone_paciente" {
       value = $input.telefone|first_notnull:""
     }
 
-    var $matches {
-      value = "/^\+?[0-9 ()-]+$/"|regex_get_first_match:$phone
+    var $format_valido {
+      value = "/^[+]?[0-9 ()-]+$/"|regex_matches:$phone
     }
 
     var $digits {
       value = $phone|replace:" ":""|replace:"(":""|replace:")":""|replace:"-":""|replace:"+":""
     }
 
-    precondition (($input.telefone == null) || ($input.telefone == "") || ((($matches|count) > 0) && (($digits|strlen) >= 8) && (($digits|strlen) <= 15))) {
+    precondition (($input.telefone == null) || ($input.telefone == "") || ($format_valido && (($digits|strlen) >= 8) && (($digits|strlen) <= 15))) {
       error_type = "inputerror"
       error = "Telefone inválido."
     }
   }
 
   response = true
+  guid = "15bPr2s8GFSEqHJHMHK11mImCpI"
 }

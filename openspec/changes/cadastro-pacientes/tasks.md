@@ -24,20 +24,20 @@
 
 - [ ] 3.2 Verificar na edição as validações dos campos enviados, a imutabilidade do identificador e o retorno de não encontrado para paciente inexistente.
 
-- [ ] 3.3 Implementar remoção física de paciente no escopo desta change.
+- [x] 3.3 Implementar remoção física de paciente no escopo desta change.
 
 - [ ] 3.4 Verificar que o paciente removido não aparece mais nas consultas e que a tentativa de remover um identificador inexistente retorna erro de não encontrado.
 
 ## 4. Verificação integrada
 
-- [ ] 4.1 Validar os artefatos XanoScript utilizando as ferramentas disponíveis.
+- [x] 4.1 Validar os artefatos XanoScript utilizando as ferramentas disponíveis.
 
 - [ ] 4.2 Executar verificações das operações de cadastro, consulta, edição e remoção.
 
 - [ ] 4.3 Confirmar que entradas inválidas não geram alterações parciais nos dados.
 
-- [ ] 4.4 Confirmar que as respostas da API expõem somente identificador, nome, telefone e e-mail.
+- [x] 4.4 Confirmar que as respostas da API expõem somente identificador, nome, telefone e e-mail.
 
-- [ ] 4.5 Confirmar que a tabela e as APIs existentes de `user` permanecem inalteradas.
+- [x] 4.5 Confirmar que a tabela e as APIs existentes de `user` permanecem inalteradas.
 
-- [ ] 4.6 Confirmar que nenhuma funcionalidade de profissionais, disponibilidades, agendamentos, autenticação ou autorização foi implementada nesta change.
+- [x] 4.6 Confirmar que nenhuma funcionalidade de profissionais, disponibilidades, agendamentos, autenticação ou autorização foi implementada nesta change.

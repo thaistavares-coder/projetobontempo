@@ -17,4 +17,5 @@ query pacientes verb=GET {
     telefone: $$.telefone
     email: $$.email
   }
+  guid = "cqrGWH1c967VroPTOqLu-NiatkI"
 }

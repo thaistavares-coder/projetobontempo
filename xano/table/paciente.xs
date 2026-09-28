@@ -12,4 +12,5 @@ table paciente {
   index = [
     {type: "primary", field: [{name: "id"}]}
   ]
+  guid = "4IvwHk8N13SmUC8xZQcgodA40BM"
 }

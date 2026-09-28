@@ -42,4 +42,5 @@ query "paciente/{paciente_id}" verb=PATCH {
     telefone: $paciente_atualizado.telefone
     email: $paciente_atualizado.email
   }
+  guid = "QG6BC-WKWdO5UYLAkmmWZO-1ncg"
 }

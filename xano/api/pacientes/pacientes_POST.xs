@@ -33,4 +33,5 @@ query pacientes verb=POST {
     telefone: $paciente.telefone
     email: $paciente.email
   }
+  guid = "LHcbl0GvjpoQY7J4gnvWspZ_FEY"
 }

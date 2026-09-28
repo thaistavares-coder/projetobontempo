@@ -24,4 +24,5 @@ query "paciente/{paciente_id}" verb=DELETE {
   }
 
   response = {success: true}
+  guid = "RO3-5_7nwz7aoQV1ErZL8xXi8eQ"
 }

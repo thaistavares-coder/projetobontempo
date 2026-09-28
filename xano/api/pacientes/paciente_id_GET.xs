@@ -24,4 +24,5 @@ query "paciente/{paciente_id}" verb=GET {
     telefone: $paciente.telefone
     email: $paciente.email
   }
+  guid = "lSK6195ZUGVuCcZFf-AFIuZMoWY"
 }
