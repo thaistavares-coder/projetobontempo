@@ -96,6 +96,8 @@ As principais ferramentas utilizadas serão:
 - Visual Studio Code;
 - Git;
 - GitHub;
+- Python;
+- Streamlit;
 - Xano;
 - Xano CLI;
 - XanoScript;
@@ -103,7 +105,15 @@ As principais ferramentas utilizadas serão:
 - Xano Developer MCP;
 - OpenSpec.
 
-O Xano será utilizado como parte do backend da aplicação e o projeto será versionado utilizando Git e GitHub.
+O backend será desenvolvido no Xano e disponibilizado ao frontend por meio de APIs HTTP. A interface web será desenvolvida em Python utilizando Streamlit e deverá consumir essas APIs; o frontend não deverá acessar diretamente o banco de dados do Xano.
+
+A URL base das APIs e eventuais credenciais deverão ser fornecidas por configuração externa, sem serem fixadas no código ou em arquivos versionados. Antes de habilitar chamadas, deverão ser confirmadas a URL base e as exigências de autenticação do ambiente.
+
+A primeira entrega da interface contempla somente sua estrutura inicial e a navegação entre Início, Pacientes e Profissionais. Nessa etapa, as páginas não realizarão chamadas HTTP ao Xano nem dependerão da disponibilidade das APIs.
+
+O projeto será versionado utilizando Git e GitHub.
+
+Para executar o frontend localmente, consulte `frontend/README.md`.
 
 ## 9. Princípios de desenvolvimento
 

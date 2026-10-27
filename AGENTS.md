@@ -30,6 +30,8 @@ O ambiente principal utiliza:
 - Visual Studio Code;
 - Git;
 - GitHub;
+- Python;
+- Streamlit;
 - Xano;
 - Xano CLI;
 - XanoScript;
@@ -40,6 +42,8 @@ O ambiente principal utiliza:
 Não introduzir tecnologias alternativas sem necessidade e sem justificativa.
 
 Mudanças que alterem significativamente a arquitetura deverão ser analisadas antes da implementação.
+
+O Streamlit deverá ser utilizado para construir a interface web em Python. O frontend deverá consumir o backend Xano somente por meio de suas APIs HTTP e nunca acessar diretamente o banco de dados. A URL base e eventuais credenciais deverão ser fornecidas por configuração externa, sem valores sensíveis em arquivos versionados.
 
 ---
 

@@ -8,11 +8,16 @@ context: |
   disponibilidades de atendimento e agendamentos de um consultório.
 
   Tech stack:
-  Xano, XanoScript, Git, GitHub, Visual Studio Code,
+  Backend: Xano e XanoScript.
+  Frontend: Python e Streamlit.
+  Ferramentas: Git, GitHub, Visual Studio Code,
   GitHub Copilot, Xano Developer MCP e OpenSpec.
 
   Architecture:
   O Xano será utilizado como backend da aplicação.
+  O Streamlit será utilizado para desenvolver a interface web.
+  O frontend deverá consumir as APIs HTTP disponibilizadas pelo Xano.
+  O frontend não deverá acessar diretamente o banco de dados.
   As regras de negócio, validações e integridade dos dados
   deverão ser tratadas preferencialmente no backend.
 
@@ -25,6 +30,9 @@ context: |
   Development:
   O projeto será desenvolvido de forma incremental utilizando OpenSpec.
   Mudanças relevantes deverão ser especificadas antes da implementação.
+  O frontend será desenvolvido em Python utilizando Streamlit.
+  As funcionalidades do frontend deverão respeitar as
+  especificações existentes e os endpoints reais do Xano.
   O agente deverá consultar AGENTS.md, docs/project-overview.md
   e docs/domain-model.md antes de alterações significativas.
 
