@@ -12,7 +12,7 @@ from services.xano import (
     specialties_api_enabled,
 )
 from services.xano_cache import clear_xano_read_caches
-from ui import apply_styles, show_page_header
+from ui import apply_styles, render_clean_table, show_page_header
 
 
 RESOURCE = "profissionais"
@@ -58,24 +58,32 @@ client = XanoClient(settings)
 enabled = api_enabled()
 write_enabled = enabled and professionals_write_enabled()
 relations_enabled = professional_specialties_api_enabled()
-relations_write_enabled = relations_enabled and professional_specialties_write_enabled()
+relations_write_enabled = (
+    relations_enabled and professional_specialties_write_enabled()
+)
 
 specialties: list[dict[str, object]] = []
 specialty_names: dict[int, str] = {}
 associations: list[dict[str, int]] = []
 associations_by_professional: dict[int, list[dict[str, int]]] = {}
 
-if specialties_api_enabled() and relations_enabled:
+if specialties_api_enabled():
     try:
         specialties = client.list_specialties()
-        associations = client.list_professional_specialties()
     except XanoError as error:
-        st.error(f"Não foi possível carregar o catálogo de vínculos: {error}")
+        st.error(f"Não foi possível carregar as especialidades: {error}")
     else:
         specialty_names = {
             int(specialty["id"]): str(specialty["nome"])
             for specialty in specialties
         }
+
+if relations_enabled:
+    try:
+        associations = client.list_professional_specialties()
+    except XanoError as error:
+        st.error(f"Não foi possível carregar o catálogo de vínculos: {error}")
+    else:
         for association in associations:
             professional_id = int(association["profissional_id"])
             associations_by_professional.setdefault(professional_id, []).append(
@@ -94,70 +102,96 @@ elif not enabled:
         "XANO_API_ENABLED=true para permitir chamadas à API."
     )
 
-with st.form("create_professional", clear_on_submit=True):
-    st.subheader("Cadastrar profissional")
-    name = st.text_input("Nome *", key="professional_create_name")
-    phone = st.text_input("Telefone *", key="professional_create_phone")
-    email = st.text_input("Email", key="professional_create_email")
-    specialty_ids_to_link = st.multiselect(
-        "Especialidade",
-        options=list(specialty_names),
-        format_func=lambda specialty_id: (
-            f"{specialty_names[specialty_id]} · ID {specialty_id}"
-        ),
-        key="professional_create_specialty_ids",
-        disabled=not relations_write_enabled or not specialty_names,
-        help=(
-            "Selecione especialidades cadastradas no Xano."
-            if relations_write_enabled
-            else "Habilite a escrita de vínculos para selecionar especialidades."
-        ),
-    )
-    create_submitted = st.form_submit_button(
-        "Cadastrar profissional",
-        type="primary",
-        disabled=not write_enabled,
-    )
+if "show_create_professional_form" not in st.session_state:
+    st.session_state["show_create_professional_form"] = False
 
-if create_submitted:
-    validation_error = validate_contact(name, phone, email)
-    if validation_error:
-        st.error(validation_error)
-    else:
-        try:
-            created_professional = client.create_record(
-                RESOURCE,
-                {
-                    "nome": name,
-                    "telefone": phone,
-                    "email": email or None,
-                },
-            )
-        except XanoError as error:
-            st.error(f"Não foi possível cadastrar o profissional: {error}")
+if not st.session_state["show_create_professional_form"]:
+    col_btn, _ = st.columns([1.4, 4.6])
+    with col_btn:
+        if st.button(
+            "Novo profissional",
+            type="primary",
+            use_container_width=True,
+        ):
+            st.session_state["show_create_professional_form"] = True
+            st.rerun()
+else:
+    _, col_close = st.columns([5, 1])
+    with col_close:
+        if st.button(
+            "Fechar",
+            key="close_create_professional",
+            type="secondary",
+            use_container_width=True,
+        ):
+            st.session_state["show_create_professional_form"] = False
+            st.rerun()
+
+    with st.form("create_professional", clear_on_submit=True):
+        st.subheader("Cadastrar profissional")
+        name = st.text_input("Nome *", key="professional_create_name")
+        phone = st.text_input("Telefone *", key="professional_create_phone")
+        email = st.text_input("Email", key="professional_create_email")
+        specialty_ids_to_link = st.multiselect(
+            "Especialidade",
+            options=list(specialty_names),
+            format_func=lambda specialty_id: (
+                f"{specialty_names[specialty_id]} · ID {specialty_id}"
+            ),
+            key="professional_create_specialty_ids",
+            disabled=not relations_write_enabled or not specialty_names,
+            help=(
+                "Selecione especialidades cadastradas no Xano."
+                if relations_write_enabled
+                else "Habilite XANO_PROFISSIONAL_ESPECIALIDADES_WRITE_ENABLED=true no .env."
+            ),
+        )
+        create_submitted = st.form_submit_button(
+            "Cadastrar profissional",
+            type="primary",
+            disabled=not write_enabled,
+        )
+
+    if create_submitted:
+        validation_error = validate_contact(name, phone, email)
+        if validation_error:
+            st.error(validation_error)
         else:
-            professional_id = int(created_professional["id"])
-            relation_errors: list[XanoError] = []
-            for specialty_id in specialty_ids_to_link:
-                try:
-                    client.create_professional_specialty(
-                        professional_id,
-                        int(specialty_id),
-                    )
-                except XanoError as error:
-                    relation_errors.append(error)
-            if relation_errors:
-                clear_xano_read_caches()
-                st.error(
-                    "Profissional cadastrado, mas não foi possível vincular "
-                    f"{len(relation_errors)} especialidade(s)."
+            try:
+                created_professional = client.create_record(
+                    RESOURCE,
+                    {
+                        "nome": name,
+                        "telefone": phone,
+                        "email": email or None,
+                    },
                 )
+            except XanoError as error:
+                st.error(f"Não foi possível cadastrar o profissional: {error}")
             else:
-                clear_xano_read_caches()
-                st.session_state["professionals_feedback"] = (
-                    "Profissional cadastrado."
-                )
-                st.rerun()
+                professional_id = int(created_professional["id"])
+                relation_errors: list[XanoError] = []
+                for specialty_id in specialty_ids_to_link:
+                    try:
+                        client.create_professional_specialty(
+                            professional_id,
+                            int(specialty_id),
+                        )
+                    except XanoError as error:
+                        relation_errors.append(error)
+                if relation_errors:
+                    clear_xano_read_caches()
+                    st.error(
+                        "Profissional cadastrado, mas não foi possível vincular "
+                        f"{len(relation_errors)} especialidade(s)."
+                    )
+                else:
+                    clear_xano_read_caches()
+                    st.session_state["show_create_professional_form"] = False
+                    st.session_state["professionals_feedback"] = (
+                        "Profissional cadastrado."
+                    )
+                    st.rerun()
 
 st.divider()
 st.subheader("Profissionais cadastrados")
@@ -183,23 +217,33 @@ if enabled:
                     specialty_names,
                 )
                 professional_rows.append(row)
-            st.dataframe(professional_rows, hide_index=True, width="stretch")
+            render_clean_table(
+                professional_rows,
+                headers={
+                    "id": "ID",
+                    "nome": "Nome",
+                    "telefone": "Telefone",
+                    "email": "Email",
+                    "especialidade": "Especialidade",
+                },
+            )
         else:
             st.info("Nenhum profissional cadastrado no Xano.")
 
 if list_succeeded and professionals:
+    professional_ids = [
+        int(professional["id"]) for professional in professionals
+    ]
+    professional_labels = {
+        int(professional["id"]): f"{professional['nome']} · ID {int(professional['id'])}"
+        for professional in professionals
+    }
+
     with st.expander("Editar profissional"):
-        professional_ids = [
-            int(professional["id"]) for professional in professionals
-        ]
         selected_id = st.selectbox(
             "Profissional",
             professional_ids,
-            format_func=lambda professional_id: next(
-                f"{professional['nome']} · ID {professional_id}"
-                for professional in professionals
-                if professional["id"] == professional_id
-            ),
+            format_func=lambda professional_id: professional_labels[professional_id],
             key="professional_edit_selection",
         )
         if st.button(
@@ -331,40 +375,40 @@ if list_succeeded and professionals:
                         st.rerun()
 
     st.subheader("Excluir profissional")
-    for professional in professionals:
-        professional_id = int(professional["id"])
-        with st.container(border=True):
-            st.write(f"{professional['nome']} · ID {professional_id}")
-            confirmed = st.checkbox(
-                f"Confirmo a exclusão de {professional['nome']}",
-                key=f"professional_delete_confirm_{professional_id}",
-                disabled=not write_enabled,
-            )
-            if st.button(
-                "Excluir profissional",
-                key=f"professional_delete_{professional_id}",
-                type="secondary",
-                disabled=not write_enabled or not confirmed,
-            ):
-                try:
-                    client.delete_record(RESOURCE, professional_id)
-                except XanoError as error:
-                    st.error(f"Não foi possível excluir o profissional: {error}")
-                else:
-                    st.session_state.pop("professional_edit_record", None)
-                    st.session_state["professionals_feedback"] = (
-                        "Profissional excluído."
-                    )
-                    st.rerun()
+    with st.container(border=True):
+        delete_id = st.selectbox(
+            "Selecione o profissional para excluir",
+            professional_ids,
+            format_func=lambda professional_id: professional_labels[professional_id],
+            key="professional_delete_selection",
+        )
+        selected_professional = next(
+            p for p in professionals if int(p["id"]) == delete_id
+        )
+        confirmed = st.checkbox(
+            f"Confirmo a exclusão de {selected_professional['nome']}",
+            key=f"professional_delete_confirm_{delete_id}",
+            disabled=not write_enabled,
+        )
+        if st.button(
+            "Excluir profissional",
+            key=f"professional_delete_{delete_id}",
+            type="secondary",
+            disabled=not write_enabled or not confirmed,
+        ):
+            try:
+                client.delete_record(RESOURCE, delete_id)
+            except XanoError as error:
+                st.error(f"Não foi possível excluir o profissional: {error}")
+            else:
+                st.session_state.pop("professional_edit_record", None)
+                st.session_state["professionals_feedback"] = (
+                    "Profissional excluído."
+                )
+                st.rerun()
 
 st.divider()
 st.subheader("Especialidades dos profissionais")
-
-relations_enabled = professional_specialties_api_enabled()
-relations_write_enabled = (
-    relations_enabled
-    and professional_specialties_write_enabled()
-)
 
 if not specialties_api_enabled():
     st.warning("A leitura do catálogo de Especialidades está desabilitada.")
@@ -379,113 +423,97 @@ elif not settings.professional_specialties_base_url:
 elif not professionals:
     st.info("Cadastre um profissional para gerenciar seus vínculos.")
 else:
-    try:
-        specialties = client.list_specialties()
-        associations = client.list_professional_specialties()
-    except XanoError as error:
-        st.error(f"Não foi possível carregar os vínculos: {error}")
-    else:
-        specialty_names = {
-            int(specialty["id"]): str(specialty["nome"])
-            for specialty in specialties
-        }
-        associations_by_professional: dict[int, list[dict[str, int]]] = {}
-        for association in associations:
-            associations_by_professional.setdefault(
-                int(association["profissional_id"]), []
-            ).append(association)
+    selected_professional_id = st.selectbox(
+        "Profissional",
+        [int(professional["id"]) for professional in professionals],
+        format_func=lambda professional_id: next(
+            f"{professional['nome']} · ID {professional_id}"
+            for professional in professionals
+            if int(professional["id"]) == professional_id
+        ),
+        key="professional_specialty_selection",
+    )
+    current_associations = associations_by_professional.get(
+        selected_professional_id, []
+    )
 
-        selected_professional_id = st.selectbox(
-            "Profissional",
-            [int(professional["id"]) for professional in professionals],
-            format_func=lambda professional_id: next(
-                f"{professional['nome']} · ID {professional_id}"
-                for professional in professionals
-                if int(professional["id"]) == professional_id
-            ),
-            key="professional_specialty_selection",
-        )
-        current_associations = associations_by_professional.get(
-            selected_professional_id, []
-        )
-
-        st.write("Especialidades vinculadas")
-        if current_associations:
-            for association in current_associations:
-                specialty_id = int(association["especialidade_id"])
-                if specialty_id not in specialty_names:
-                    continue
-                with st.container(border=True):
-                    st.write(specialty_names[specialty_id])
-                    confirmed = st.checkbox(
-                        f"Confirmo a remoção de {specialty_names[specialty_id]}",
-                        key=(
-                            "professional_specialty_delete_confirm_"
-                            f"{association['id']}"
-                        ),
-                        disabled=not relations_write_enabled,
-                    )
-                    if st.button(
-                        "Remover vínculo",
-                        key=f"professional_specialty_delete_{association['id']}",
-                        disabled=not relations_write_enabled or not confirmed,
-                    ):
-                        try:
-                            client.delete_professional_specialty(
-                                int(association["id"])
-                            )
-                        except XanoError as error:
-                            st.error(f"Não foi possível remover o vínculo: {error}")
-                        else:
-                            clear_xano_read_caches()
-                            st.session_state["professionals_feedback"] = (
-                                "Vínculo removido."
-                            )
-                            st.rerun()
-        else:
-            st.info("Nenhuma especialidade vinculada.")
-
-        linked_specialty_ids = {
-            int(association["especialidade_id"])
-            for association in current_associations
-        }
-        available_specialties = [
-            specialty
-            for specialty in specialties
-            if int(specialty["id"]) not in linked_specialty_ids
-        ]
-        if available_specialties:
-            specialty_id_to_add = st.selectbox(
-                "Especialidade para vincular",
-                [int(specialty["id"]) for specialty in available_specialties],
-                format_func=lambda specialty_id: specialty_names[specialty_id],
-                key="professional_specialty_create_selection",
-            )
-            if st.button(
-                "Adicionar vínculo",
-                disabled=not relations_write_enabled,
-                key="professional_specialty_create",
-            ):
-                pair_exists = any(
-                    int(association["profissional_id"]) == selected_professional_id
-                    and int(association["especialidade_id"]) == specialty_id_to_add
-                    for association in associations
+    st.write("Especialidades vinculadas")
+    if current_associations:
+        for association in current_associations:
+            specialty_id = int(association["especialidade_id"])
+            if specialty_id not in specialty_names:
+                continue
+            with st.container(border=True):
+                st.write(specialty_names[specialty_id])
+                confirmed = st.checkbox(
+                    f"Confirmo a remoção de {specialty_names[specialty_id]}",
+                    key=(
+                        "professional_specialty_delete_confirm_"
+                        f"{association['id']}"
+                    ),
+                    disabled=not relations_write_enabled,
                 )
-                if pair_exists:
-                    st.error("O vínculo já está cadastrado.")
-                else:
+                if st.button(
+                    "Remover vínculo",
+                    key=f"professional_specialty_delete_{association['id']}",
+                    disabled=not relations_write_enabled or not confirmed,
+                ):
                     try:
-                        client.create_professional_specialty(
-                            selected_professional_id,
-                            specialty_id_to_add,
+                        client.delete_professional_specialty(
+                            int(association["id"])
                         )
                     except XanoError as error:
-                        st.error(f"Não foi possível criar o vínculo: {error}")
+                        st.error(f"Não foi possível remover o vínculo: {error}")
                     else:
                         clear_xano_read_caches()
                         st.session_state["professionals_feedback"] = (
-                            "Vínculo criado."
+                            "Vínculo removido."
                         )
                         st.rerun()
-        else:
-            st.info("Não há nova especialidade disponível para vincular.")
+    else:
+        st.info("Nenhuma especialidade vinculada.")
+
+    linked_specialty_ids = {
+        int(association["especialidade_id"])
+        for association in current_associations
+    }
+    available_specialties = [
+        specialty
+        for specialty in specialties
+        if int(specialty["id"]) not in linked_specialty_ids
+    ]
+    if available_specialties:
+        specialty_id_to_add = st.selectbox(
+            "Especialidade para vincular",
+            [int(specialty["id"]) for specialty in available_specialties],
+            format_func=lambda specialty_id: specialty_names[specialty_id],
+            key="professional_specialty_create_selection",
+        )
+        if st.button(
+            "Adicionar vínculo",
+            disabled=not relations_write_enabled,
+            key="professional_specialty_create",
+        ):
+            pair_exists = any(
+                int(association["profissional_id"]) == selected_professional_id
+                and int(association["especialidade_id"]) == specialty_id_to_add
+                for association in associations
+            )
+            if pair_exists:
+                st.error("O vínculo já está cadastrado.")
+            else:
+                try:
+                    client.create_professional_specialty(
+                        selected_professional_id,
+                        specialty_id_to_add,
+                    )
+                except XanoError as error:
+                    st.error(f"Não foi possível criar o vínculo: {error}")
+                else:
+                    clear_xano_read_caches()
+                    st.session_state["professionals_feedback"] = (
+                        "Vínculo criado."
+                    )
+                    st.rerun()
+    else:
+        st.info("Não há nova especialidade disponível para vincular.")

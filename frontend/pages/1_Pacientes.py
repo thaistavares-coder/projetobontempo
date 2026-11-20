@@ -6,9 +6,8 @@ from services.xano import (
     XanoError,
     XanoSettings,
     api_enabled,
-    patients_write_enabled,
 )
-from ui import apply_styles, show_page_header
+from ui import apply_styles, render_clean_table, show_page_header
 
 
 RESOURCE = "pacientes"
@@ -27,7 +26,6 @@ if feedback:
 settings = XanoSettings.from_environment()
 client = XanoClient(settings)
 enabled = api_enabled()
-write_enabled = enabled and patients_write_enabled()
 
 if not settings.patients_base_url or not settings.patients_base_url.strip():
     st.warning(
@@ -41,36 +39,62 @@ elif not enabled:
         "XANO_API_ENABLED=true para permitir chamadas à API."
     )
 
-with st.form("create_patient", clear_on_submit=True):
-    st.subheader("Cadastrar paciente")
-    name = st.text_input("Nome *", key="patient_create_name")
-    phone = st.text_input("Telefone *", key="patient_create_phone")
-    email = st.text_input("Email", key="patient_create_email")
-    create_submitted = st.form_submit_button(
-        "Cadastrar paciente",
-        type="primary",
-        disabled=not write_enabled,
-    )
+if "show_create_patient_form" not in st.session_state:
+    st.session_state["show_create_patient_form"] = False
 
-if create_submitted:
-    validation_error = validate_contact(name, phone, email)
-    if validation_error:
-        st.error(validation_error)
-    else:
-        try:
-            client.create_record(
-                RESOURCE,
-                {
-                    "nome": name,
-                    "telefone": phone,
-                    "email": email or None,
-                },
-            )
-        except XanoError as error:
-            st.error(f"Não foi possível cadastrar o paciente: {error}")
-        else:
-            st.session_state["patients_feedback"] = "Paciente cadastrado."
+if not st.session_state["show_create_patient_form"]:
+    col_btn, _ = st.columns([1.2, 4.8])
+    with col_btn:
+        if st.button(
+            "Novo paciente",
+            type="primary",
+            use_container_width=True,
+        ):
+            st.session_state["show_create_patient_form"] = True
             st.rerun()
+else:
+    _, col_close = st.columns([5, 1])
+    with col_close:
+        if st.button(
+            "Fechar",
+            key="close_create_patient",
+            type="secondary",
+            use_container_width=True,
+        ):
+            st.session_state["show_create_patient_form"] = False
+            st.rerun()
+
+    with st.form("create_patient", clear_on_submit=True):
+        st.subheader("Cadastrar paciente")
+        name = st.text_input("Nome *", key="patient_create_name")
+        phone = st.text_input("Telefone *", key="patient_create_phone")
+        email = st.text_input("Email", key="patient_create_email")
+        create_submitted = st.form_submit_button(
+            "Cadastrar paciente",
+            type="primary",
+            disabled=not enabled,
+        )
+
+    if create_submitted:
+        validation_error = validate_contact(name, phone, email)
+        if validation_error:
+            st.error(validation_error)
+        else:
+            try:
+                client.create_record(
+                    RESOURCE,
+                    {
+                        "nome": name,
+                        "telefone": phone,
+                        "email": email or None,
+                    },
+                )
+            except XanoError as error:
+                st.error(f"Não foi possível cadastrar o paciente: {error}")
+            else:
+                st.session_state["show_create_patient_form"] = False
+                st.session_state["patients_feedback"] = "Paciente cadastrado."
+                st.rerun()
 
 st.divider()
 st.subheader("Pacientes cadastrados")
@@ -85,21 +109,30 @@ if enabled:
     else:
         list_succeeded = True
         if patients:
-            st.dataframe(patients, hide_index=True, width="stretch")
+            render_clean_table(
+                patients,
+                headers={
+                    "id": "ID",
+                    "nome": "Nome",
+                    "telefone": "Telefone",
+                    "email": "Email",
+                },
+            )
         else:
             st.info("Nenhum paciente cadastrado no Xano.")
 
 if list_succeeded and patients:
+    patient_ids = [int(patient["id"]) for patient in patients]
+    patient_labels = {
+        int(patient["id"]): f"{patient['nome']} · ID {int(patient['id'])}"
+        for patient in patients
+    }
+
     with st.expander("Editar paciente"):
-        patient_ids = [int(patient["id"]) for patient in patients]
         selected_id = st.selectbox(
             "Paciente",
             patient_ids,
-            format_func=lambda patient_id: next(
-                f"{patient['nome']} · ID {patient_id}"
-                for patient in patients
-                if patient["id"] == patient_id
-            ),
+            format_func=lambda patient_id: patient_labels[patient_id],
             key="patient_edit_selection",
         )
         if st.button(
@@ -139,7 +172,7 @@ if list_succeeded and patients:
                 )
                 update_submitted = st.form_submit_button(
                     "Salvar alterações",
-                    disabled=not write_enabled,
+                    disabled=not enabled,
                 )
             if update_submitted:
                 validation_error = validate_contact(
@@ -168,28 +201,34 @@ if list_succeeded and patients:
                         st.rerun()
 
     st.subheader("Excluir paciente")
-    for patient in patients:
-        patient_id = int(patient["id"])
-        with st.container(border=True):
-            st.write(f"{patient['nome']} · ID {patient_id}")
-            confirmed = st.checkbox(
-                f"Confirmo a exclusão de {patient['nome']}",
-                key=f"patient_delete_confirm_{patient_id}",
-            disabled=not write_enabled,
-            )
-            if st.button(
-                "Excluir paciente",
-                key=f"patient_delete_{patient_id}",
-                type="secondary",
-                disabled=not write_enabled or not confirmed,
-            ):
-                try:
-                    client.delete_record(RESOURCE, patient_id)
-                except XanoError as error:
-                    st.error(f"Não foi possível excluir o paciente: {error}")
-                else:
-                    st.session_state.pop("patient_edit_record", None)
-                    st.session_state["patients_feedback"] = (
-                        "Paciente excluído."
-                    )
-                    st.rerun()
+    with st.container(border=True):
+        delete_id = st.selectbox(
+            "Selecione o paciente para excluir",
+            patient_ids,
+            format_func=lambda patient_id: patient_labels[patient_id],
+            key="patient_delete_selection",
+        )
+        selected_patient = next(
+            p for p in patients if int(p["id"]) == delete_id
+        )
+        confirmed = st.checkbox(
+            f"Confirmo a exclusão de {selected_patient['nome']}",
+            key=f"patient_delete_confirm_{delete_id}",
+            disabled=not enabled,
+        )
+        if st.button(
+            "Excluir paciente",
+            key=f"patient_delete_{delete_id}",
+            type="secondary",
+            disabled=not enabled or not confirmed,
+        ):
+            try:
+                client.delete_record(RESOURCE, delete_id)
+            except XanoError as error:
+                st.error(f"Não foi possível excluir o paciente: {error}")
+            else:
+                st.session_state.pop("patient_edit_record", None)
+                st.session_state["patients_feedback"] = (
+                    "Paciente excluído."
+                )
+                st.rerun()
